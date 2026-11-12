@@ -14,7 +14,7 @@ A private, offline-capable web app (PWA) for recording twice-daily bus rider cou
 
 ## Updating
 
-After changing any file, bump `CACHE` in `sw.js` (currently `buscount-v4`) so installed copies refresh.
+After changing any file, bump `CACHE` in `sw.js` (currently `buscount-v5`) so installed copies refresh.
 
 ## Files
 

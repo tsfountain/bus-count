@@ -207,6 +207,7 @@
   const TITLE_KEY = 'buscount.title';
   const BACKUP_KEY = 'buscount.lastBackup';
   let bannerDismissed = false;
+  let autoDate = ''; // the date the form filled in by itself
   const $ = s => document.querySelector(s);
   const pad = n => String(n).padStart(2, '0');
 
@@ -261,7 +262,7 @@
     $('#form-title').textContent = 'New entry';
     $('#btn-save').textContent = 'Save entry';
     $('#btn-cancel').hidden = true;
-    $('#f-date').value = todayStr();
+    $('#f-date').value = autoDate = todayStr();
     $('#f-start').value = '';
     $('#f-stop').value = '';
     $('#f-c1').value = '';
@@ -422,7 +423,18 @@
   $('#btn-csv').addEventListener('click', () => exportCsv(entries, true));
   $('#btn-banner-export').addEventListener('click', () => exportCsv(entries, true));
   $('#btn-banner-later').addEventListener('click', () => { bannerDismissed = true; updateBanner(); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateBanner(); });
+  // When the app comes back to the foreground: refresh the banner, and roll the form's date
+  // forward to today, but only for an untouched new entry (never while typing or editing).
+  function refreshDate() {
+    if (editingId) return;
+    if ($('#f-date').value !== autoDate) return;
+    if ($('#f-start').value || $('#f-stop').value || $('#f-c1').value || $('#f-c2').value) return;
+    const t = todayStr();
+    if (t !== autoDate) $('#f-date').value = autoDate = t;
+  }
+  function onForeground() { refreshDate(); updateBanner(); }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) onForeground(); });
+  window.addEventListener('pageshow', onForeground);
   $('#btn-report').addEventListener('click', openReport);
   $('#btn-back').addEventListener('click', closeReport);
   $('#btn-print').addEventListener('click', () => window.print());
