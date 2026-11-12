@@ -122,11 +122,11 @@
           </div>
         </div>
         <div>
-          <label for="f-c1">Rider count 1</label>
+          <label for="f-c1">Cole</label>
           <input id="f-c1" type="number" inputmode="numeric" min="0" step="1" placeholder="0" required>
         </div>
         <div>
-          <label for="f-c2">Rider count 2</label>
+          <label for="f-c2">Spofford</label>
           <input id="f-c2" type="number" inputmode="numeric" min="0" step="1" placeholder="0" required>
         </div>
         <div class="full total-box"><span>Total riders (1 + 2)</span><span id="f-total">0</span></div>
@@ -274,7 +274,7 @@
       c1: parseInt($('#f-c1').value, 10), c2: parseInt($('#f-c2').value, 10)
     };
     if (!rec.date || !rec.start || !rec.stop) return ($('#err').textContent = 'Enter a date, start time and stop time.');
-    if (!(rec.c1 >= 0) || !(rec.c2 >= 0)) return ($('#err').textContent = 'Rider counts must be whole numbers, 0 or more.');
+    if (!(rec.c1 >= 0) || !(rec.c2 >= 0)) return ($('#err').textContent = 'Counts must be whole numbers, 0 or more.');
     if (rec.stop < rec.start) return ($('#err').textContent = 'Stop time is earlier than start time.');
     if (editingId) {
       const i = entries.findIndex(x => x.id === editingId);
@@ -293,13 +293,13 @@
     const list = $('#list');
     const sum = entries.reduce((a, e) => ({ c1: a.c1 + e.c1, c2: a.c2 + e.c2 }), { c1: 0, c2: 0 });
     $('#summary').textContent = entries.length
-      ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · Count 1: ${sum.c1} · Count 2: ${sum.c2} · Total: ${sum.c1 + sum.c2}`
+      ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · Cole: ${sum.c1} · Spofford: ${sum.c2} · Total: ${sum.c1 + sum.c2}`
       : '';
     if (!entries.length) { list.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
     list.innerHTML = sorted(entries, -1).map(e => `
       <div class="entry">
         <div class="top"><span class="date">${esc(fmtDate(e.date))}</span><span class="times">${esc(fmtTime(e.start))} – ${esc(fmtTime(e.stop))}</span></div>
-        <div class="nums"><span>Count 1: <b>${e.c1}</b></span><span>Count 2: <b>${e.c2}</b></span><span>Total: <b>${total(e)}</b></span></div>
+        <div class="nums"><span>Cole: <b>${e.c1}</b></span><span>Spofford: <b>${e.c2}</b></span><span>Total: <b>${total(e)}</b></span></div>
         <div class="btns">
           <button class="small" data-edit="${e.id}">Edit</button>
           <button class="small danger" data-del="${e.id}">Delete</button>
@@ -322,7 +322,7 @@
   /* ---------- CSV ---------- */
   function csvCell(v) { const s = String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function buildCsv(list) {
-    const rows = [['Date', 'Start Time', 'Stop Time', 'Rider Count 1', 'Rider Count 2', 'Total Riders']];
+    const rows = [['Date', 'Start Time', 'Stop Time', 'Cole', 'Spofford', 'Total Riders']];
     sorted(list, 1).forEach(e => rows.push([e.date, e.start, e.stop, e.c1, e.c2, total(e)]));
     return rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
   }
@@ -361,7 +361,7 @@
     const s1 = rows.reduce((a, e) => a + e.c1, 0), s2 = rows.reduce((a, e) => a + e.c2, 0);
     $('#r-table').innerHTML = `
       <table>
-        <thead><tr><th>Date</th><th>Start</th><th>Stop</th><th>Count 1</th><th>Count 2</th><th>Total</th></tr></thead>
+        <thead><tr><th>Date</th><th>Start</th><th>Stop</th><th>Cole</th><th>Spofford</th><th>Total</th></tr></thead>
         <tbody>${rows.map(e => `<tr><td>${esc(fmtShort(e.date))}</td><td>${esc(fmtTime(e.start))}</td><td>${esc(fmtTime(e.stop))}</td><td>${e.c1}</td><td>${e.c2}</td><td>${total(e)}</td></tr>`).join('')}</tbody>
         <tfoot><tr><td colspan="3">Totals (${rows.length} entr${rows.length === 1 ? 'y' : 'ies'})</td><td>${s1}</td><td>${s2}</td><td>${s1 + s2}</td></tr></tfoot>
       </table>`;
