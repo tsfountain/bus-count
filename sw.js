@@ -1,7 +1,7 @@
 // Cache-first service worker so the app opens offline.
 // Bump CACHE when you change any file so phones pick up the update.
-const CACHE = 'buscount-v6';
-const FILES = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
+const CACHE = 'buscount-v7';
+const FILES = ['./', './index.html', './manifest.json', './icon-yellow-180.png', './icon-yellow-192.png', './icon-yellow-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
