@@ -78,6 +78,9 @@
   .report-head { margin-bottom:12px; }
   .report-head .t { font-size:20px; font-weight:700; }
   .report-head .m { color:var(--muted); font-size:14px; }
+  .banner { background:#fff7e0; color:#4a3500; border:1px solid #f0c75e; border-radius:14px; padding:14px; margin-bottom:14px; }
+  .banner .actions { margin-top:10px; }
+  @media (prefers-color-scheme: dark) { .banner { background:#3a2e08; color:#ffe9a8; border-color:#7a6014; } }
   .toast { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 20px); transform:translateX(-50%);
     background:#111; color:#fff; padding:10px 16px; border-radius:999px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .2s; }
   .toast.show { opacity:.95; }
@@ -99,6 +102,14 @@
   <!-- ===== MAIN VIEW ===== -->
   <div id="view-main">
     <h1>Bus Count</h1>
+
+    <div class="banner no-print" id="backup-banner" role="status" hidden>
+      <div><b>Time for your weekly backup.</b> Export your counts so they are saved outside this phone.</div>
+      <div class="actions">
+        <button type="button" class="primary small" id="btn-banner-export">Export CSV now</button>
+        <button type="button" class="small" id="btn-banner-later">Later</button>
+      </div>
+    </div>
 
     <form id="form" class="card" autocomplete="off">
       <h2 id="form-title">New entry</h2>
@@ -129,7 +140,7 @@
           <label for="f-c2">Spofford</label>
           <input id="f-c2" type="number" inputmode="numeric" min="0" step="1" placeholder="0" required>
         </div>
-        <div class="full total-box"><span>Total riders (1 + 2)</span><span id="f-total">0</span></div>
+        <div class="full total-box"><span>Total (Cole + Spofford)</span><span id="f-total">0</span></div>
       </div>
       <div class="err" id="err" role="alert"></div>
       <div class="actions" style="margin-top:12px">
@@ -141,6 +152,7 @@
     <div class="card">
       <h2>Entries</h2>
       <div class="summary" id="summary"></div>
+      <div class="summary" id="backup-info"></div>
       <div id="list"></div>
       <div class="actions" style="margin-top:12px">
         <button type="button" id="btn-csv">Export CSV</button>
@@ -193,6 +205,8 @@
 (() => {
   const KEY = 'buscount.v1';
   const TITLE_KEY = 'buscount.title';
+  const BACKUP_KEY = 'buscount.lastBackup';
+  let bannerDismissed = false;
   const $ = s => document.querySelector(s);
   const pad = n => String(n).padStart(2, '0');
 
@@ -295,6 +309,9 @@
     $('#summary').textContent = entries.length
       ? `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · Cole: ${sum.c1} · Spofford: ${sum.c2} · Total: ${sum.c1 + sum.c2}`
       : '';
+    const lb = lastBackup();
+    $('#backup-info').textContent = entries.length ? (lb ? `Last backup: ${fmtDate(lb)}` : 'No backup exported yet.') : '';
+    updateBanner();
     if (!entries.length) { list.innerHTML = '<div class="empty">No entries yet.</div>'; return; }
     list.innerHTML = sorted(entries, -1).map(e => `
       <div class="entry">
@@ -326,14 +343,17 @@
     sorted(list, 1).forEach(e => rows.push([e.date, e.start, e.stop, e.c1, e.c2, total(e)]));
     return rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
   }
-  async function exportCsv(list) {
+  // isBackup = true for a full export of all entries; that is what resets the weekly reminder.
+  async function exportCsv(list, isBackup) {
     if (!list.length) return toast('Nothing to export yet');
     const name = `bus-count-${todayStr()}.csv`;
     const csv = buildCsv(list);
+    const done = () => { if (isBackup) markBackup(); };
     try {
       const file = new File([csv], name, { type: 'text/csv' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: name });
+        done();
         return;
       }
     } catch (e) {
@@ -343,7 +363,22 @@
     const a = document.createElement('a');
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+    done();
   }
+
+  /* ---------- weekly backup reminder (Fridays after noon) ---------- */
+  function lastBackup() { try { return localStorage.getItem(BACKUP_KEY) || ''; } catch (e) { return ''; } }
+  function markBackup() {
+    try { localStorage.setItem(BACKUP_KEY, todayStr()); } catch (e) {}
+    render();
+    toast('Backup saved');
+  }
+  function backupDue() {
+    const now = new Date();
+    return now.getDay() === 5 && now.getHours() >= 12 && entries.length > 0 &&
+           lastBackup() !== todayStr() && !bannerDismissed;
+  }
+  function updateBanner() { $('#backup-banner').hidden = !backupDue(); }
 
   /* ---------- report ---------- */
   function reportRows() {
@@ -384,7 +419,10 @@
   $('#btn-cancel').addEventListener('click', resetForm);
   document.querySelectorAll('[data-now]').forEach(b => b.addEventListener('click', () => { $('#' + b.dataset.now).value = nowTime(); }));
   $('#list').addEventListener('click', onListClick);
-  $('#btn-csv').addEventListener('click', () => exportCsv(entries));
+  $('#btn-csv').addEventListener('click', () => exportCsv(entries, true));
+  $('#btn-banner-export').addEventListener('click', () => exportCsv(entries, true));
+  $('#btn-banner-later').addEventListener('click', () => { bannerDismissed = true; updateBanner(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateBanner(); });
   $('#btn-report').addEventListener('click', openReport);
   $('#btn-back').addEventListener('click', closeReport);
   $('#btn-print').addEventListener('click', () => window.print());
